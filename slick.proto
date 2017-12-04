@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+package com.slickqa;
+
+message Project {
+  string id = 1 [(gogoproto.moretags) = "bson:\"_id,omitempty\""];;
+  string name = 2;
+}
