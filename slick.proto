@@ -1,8 +1,28 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 package com.slickqa;
 
 message Project {
   bytes Id = 1; //`bson:"_id,omitempty"`
   string Name = 2; //`bson:"name"`
+  repeated string AutomationTools = 3; //`bson:"automationTools"`
+  repeated string Tags = 4; //`bson:"tags"`
+  map<string, string> Attributes = 5; //`bson:"attributes"`
+  google.protobuf.Timestamp LastUpdated = 6; //`bson:"lastUpdated"`
+
+}
+
+message Component{
+  bytes Id = 1; //`bson:"_id,omitempty"`
+  string Name = 2; //`bson:"name"`
+  bytes ProjectId= 3; //`bson:"projectId,omitempty"`
+}
+
+message Feature{
+  bytes Id = 1; //`bson:"_id,omitempty"`
+  string Name = 2; //`bson:"name"`
+  bytes ComponentId= 3; //`bson:"componentId,omitempty"` //TODO: should this be omitempty?
+  bytes ProjectId= 4; //`bson:"projectId,omitempty"`
 }
