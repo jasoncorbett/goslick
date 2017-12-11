@@ -30,3 +30,18 @@ message Feature{
   bytes ComponentId= 3; //`bson:"componentId,omitempty"` //TODO: should this be omitempty?
   bytes ProjectId= 4; //`bson:"projectId,omitempty"`
 }
+
+message Testcase{
+  bytes Id = 1; //`bson:"_id,omitempty"`
+  string Name = 2; //`bson:"name"`
+  string AutomationKey = 3; //`bson:"automationId"`
+  string AutomationTool = 4; //`bson:"automationTool"`
+  bytes ComponentId = 5; //`bson:"componentId,omitempty"` //TODO: should this be omitempty?
+  bool Deleted = 6; //`bson:"bson:"deleted"`
+  int32 ImportanceRating = 7; //`bson:"bson:"importanceRating"`
+  repeated string InactiveNotes = 8; //`bson:"inactiveNotes"`
+  bytes ProjectId = 9; //`bson:"projectId,omitempty"`
+  int32 StabilityRading = 10; //`bson:"stabilityRating"`
+  repeated string Steps = 11; //`bson:"steps"`
+  repeated string Tags = 12; //`bson:"tags"`
+}
