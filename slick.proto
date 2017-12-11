@@ -4,6 +4,10 @@ import "google/protobuf/timestamp.proto";
 
 package com.slickqa;
 
+option java_package = "com.slickqa.client.protobuf";
+option go_package = "slickqa";
+option csharp_namespace = "com.slickqa.client.protobuf";
+
 message Project {
   bytes Id = 1; //`bson:"_id,omitempty"`
   string Name = 2; //`bson:"name"`
