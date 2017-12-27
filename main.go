@@ -22,5 +22,5 @@ func main() {
 	}
 	//result.Id = fmt.Sprintf("%x", result.Id)
 
-	fmt.Println(result)
+	fmt.Printf("%+v\n", result)
 }
