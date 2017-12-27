@@ -21,14 +21,14 @@ message Project {
 message Component{
   bytes Id = 1; //`bson:"_id,omitempty"`
   string Name = 2; //`bson:"name"`
-  bytes ProjectId= 3; //`bson:"projectId,omitempty"`
+  string Project = 3; //`bson:"_id,omitempty"`
 }
 
 message Feature{
   bytes Id = 1; //`bson:"_id,omitempty"`
   string Name = 2; //`bson:"name"`
   bytes ComponentId= 3; //`bson:"componentId,omitempty"` //TODO: should this be omitempty?
-  bytes ProjectId= 4; //`bson:"projectId,omitempty"`
+  string ProjectId= 4; //`bson:"_id,omitempty"`
 }
 
 message Testcase{
@@ -40,8 +40,24 @@ message Testcase{
   bool Deleted = 6; //`bson:"bson:"deleted"`
   int32 ImportanceRating = 7; //`bson:"bson:"importanceRating"`
   repeated string InactiveNotes = 8; //`bson:"inactiveNotes"`
-  bytes ProjectId = 9; //`bson:"projectId,omitempty"`
-  int32 StabilityRading = 10; //`bson:"stabilityRating"`
+  string ProjectId = 9; //`bson:"_id,omitempty"`
+  int32 StabilityRating = 10; //`bson:"stabilityRating"`
   repeated string Steps = 11; //`bson:"steps"`
   repeated string Tags = 12; //`bson:"tags"`
+}
+
+message Testplans{
+  bytes Id = 1; //`bson:"_id,omitempty"`
+  string Name = 2; //`bson:"name"`
+}
+
+message Testruns{
+  bytes Id = 1; //`bson:"_id,omitempty"`
+  string Name = 2; //`bson:"name"`
+  string ProjectId = 3; //`bson:"_id,omitempty"`
+  string Build = 4; //`bson:"build"`
+  google.protobuf.Timestamp RunStarted = 5; //`bson:"runStarted"`
+  google.protobuf.Timestamp RunFinished = 6; //`bson:"runFinished"`
+  string State = 7; //`bson:"state"`
+  string TestplanId = 9; //`bson:"_id,omitempty"`
 }
