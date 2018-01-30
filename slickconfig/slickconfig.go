@@ -82,3 +82,7 @@ func (c *SlickConfiguration) LoadFromLocation(location string) {
 		}
 	}
 }
+
+func (c *SlickConfiguration) ToBytes() ([]byte, error) {
+	return toml.Marshal(*c)
+}
