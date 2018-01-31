@@ -14,7 +14,6 @@ import (
 	"net"
 	"log"
 	"os"
-	"google.golang.org/grpc/grpclog"
 )
 
 // grpcHandlerFunc returns an http.Handler that delegates to grpcServer on incoming gRPC
@@ -93,12 +92,18 @@ func main() {
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 		conn, err := grpc.Dial("localhost:8888", opts...)
 		if err != nil {
-			grpclog.Fatalf("fail to dial: %v", err)
+			fmt.Printf("fail to dial: %v\n", err)
+			os.Exit(1)
 		}
 		defer conn.Close()
 		client := slickqa.NewAuthClient(conn)
 
 		msg, err := client.IsAuthorized(context.Background(), &slickqa.IsAuthorizedRequest{permission})
-		fmt.Printf("Authorised for %s: %t\n", permission, msg.Allowed)
+		if err == nil {
+			fmt.Printf("Authorised for %s: %t\n", permission, msg.Allowed)
+		} else {
+			fmt.Println("ERROR: ", err)
+			os.Exit(1)
+		}
 	}
 }
