@@ -6,7 +6,7 @@
 Package slickqa is a generated protocol buffer package.
 
 It is generated from these files:
-	slickqa.proto
+	auth.proto
 
 It has these top-level messages:
 	IsAuthorizedRequest
@@ -141,10 +141,10 @@ var _Auth_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "slickqa.proto",
+	Metadata: "auth.proto",
 }
 
-func init() { proto.RegisterFile("slickqa.proto", fileDescriptor0) }
+func init() { proto.RegisterFile("auth.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
 	// 233 bytes of a gzipped FileDescriptorProto
