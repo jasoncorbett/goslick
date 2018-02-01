@@ -24,3 +24,5 @@ certs.go: server.pem server.key jwt.key jwt.pub
 	cat jwt.pub >> certs.go
 	echo "\`\n)\n" >> certs.go
 
+clean:
+	rm -f server.key server.pem jwt.key jwt.pub certs.go

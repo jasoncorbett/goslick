@@ -9,3 +9,6 @@ auth.pb.gw.go:
 
 auth.swagger.json:
 	protoc -I/usr/local/include -I. -I${GOPATH}/src -I${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --swagger_out=logtostderr=true:. auth.proto
+
+clean:
+	rm -f auth.pb.go auth.pb.gw.go auth.swagger.json
