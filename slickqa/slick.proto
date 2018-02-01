@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 
 package com.slickqa;
 
@@ -8,6 +9,25 @@ option java_package = "com.slickqa.client.protobuf";
 option go_package = "slickqa";
 option csharp_namespace = "com.slickqa.client.protobuf";
 
+// auth stuff
+message IsAuthorizedRequest {
+  string permission = 1;
+}
+
+message IsAuthorizedResponse {
+  bool allowed = 1;
+}
+
+service Auth {
+  rpc IsAuthorized(IsAuthorizedRequest) returns(IsAuthorizedResponse) {
+    option (google.api.http) = {
+            get: "/api/v1/isAuthorized/{permission}"
+        };
+  }
+}
+
+
+// slick objects
 message Project {
   bytes Id = 1; //`bson:"_id,omitempty"`
   string Name = 2; //`bson:"name"`
@@ -59,5 +79,5 @@ message Testruns{
   google.protobuf.Timestamp RunStarted = 5; //`bson:"runStarted"`
   google.protobuf.Timestamp RunFinished = 6; //`bson:"runFinished"`
   string State = 7; //`bson:"state"`
-  string TestplanId = 9; //`bson:"_id,omitempty"`
+  string TestplanId = 8; //`bson:"_id,omitempty"`
 }
