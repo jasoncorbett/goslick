@@ -15,6 +15,8 @@ import (
 	"os"
 	"github.com/jasoncorbett/goslick/jwtauth"
 	"github.com/serussell/logxi/v1"
+	"mime"
+	"io/ioutil"
 )
 
 
@@ -37,6 +39,17 @@ func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 	})
 }
 
+
+
+func serveSwagger(mux *http.ServeMux) {
+	mime.AddExtensionType(".svg", "image/svg+xml")
+
+	// Expose files in third_party/swagger-ui/ on <host>/swagger-ui
+	fileServer := http.FileServer(http.Dir("third_party/swagger-ui"))
+	prefix := "/swagger-ui/"
+	mux.Handle(prefix, http.StripPrefix(prefix, fileServer))
+}
+
 func main() {
 	if len(os.Args) == 1 || (len(os.Args) > 1 && os.Args[1] == "serve") {
 		opts := []grpc.ServerOption{
@@ -53,13 +66,21 @@ func main() {
 		dopts := []grpc.DialOption{grpc.WithTransportCredentials(dcreds)}
 		mux := http.NewServeMux()
 		gwmux := runtime.NewServeMux()
-		err := slickqa.RegisterAuthHandlerFromEndpoint(ctx, gwmux, "localhost:8888", dopts)
+
+		swaggerJsonContents, err := ioutil.ReadFile("slickqa/slick.swagger.json")
+		mux.HandleFunc("/swagger.json", func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Mimetype", "application/json")
+			w.Write(swaggerJsonContents)
+		})
+
+		err = slickqa.RegisterAuthHandlerFromEndpoint(ctx, gwmux, "localhost:8888", dopts)
 		if err != nil {
 			fmt.Printf("serve: %v\n", err)
 			return
 		}
 
 		mux.Handle("/", gwmux)
+		serveSwagger(mux)
 
 		conn, err := net.Listen("tcp", "127.0.0.1:8888")
 		if err != nil {
