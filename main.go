@@ -220,8 +220,7 @@ func main() {
 		permission := os.Args[2]
 
 		var opts []grpc.DialOption
-		//creds := credentials.NewClientTLSFromCert(certs.DemoCertPool, "localhost:8888")
-		creds := credentials.NewTLS(&tls.Config{})
+		creds := credentials.NewClientTLSFromCert(certs.DemoCertPool, "localhost:8888")
 		jwtCreds, _ := jwtauth.NewCredential()
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 		opts = append(opts, grpc.WithPerRPCCredentials(jwtCreds))
