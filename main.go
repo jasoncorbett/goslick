@@ -17,6 +17,10 @@ import (
 	"github.com/serussell/logxi/v1"
 	"mime"
 	"io/ioutil"
+	"github.com/dghubble/gologin"
+	"github.com/dghubble/gologin/google"
+	"golang.org/x/oauth2"
+	googleOAuth2 "golang.org/x/oauth2/google"
 )
 
 
@@ -39,8 +43,6 @@ func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 	})
 }
 
-
-
 func serveSwagger(mux *http.ServeMux) {
 	mime.AddExtensionType(".svg", "image/svg+xml")
 
@@ -48,6 +50,104 @@ func serveSwagger(mux *http.ServeMux) {
 	fileServer := http.FileServer(http.Dir("third_party/swagger-ui"))
 	prefix := "/swagger-ui/"
 	mux.Handle(prefix, http.StripPrefix(prefix, fileServer))
+}
+
+func serveStaticAssets(mux *http.ServeMux) {
+	fileServer := http.FileServer(http.Dir("static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fileServer))
+}
+
+
+func loginHandlers(mux *http.ServeMux) {
+	oauth2Config := &oauth2.Config{
+		ClientID:     "",
+		ClientSecret: "",
+		RedirectURL:  "https://localhost:8888/login/google-callback",
+		Endpoint:     googleOAuth2.Endpoint,
+		Scopes:       []string{"profile", "email"},
+	}
+	// state param cookies require HTTPS by default; disable for localhost development
+	stateConfig := gologin.DebugOnlyCookieConfig
+	mux.Handle("/login/google", google.StateHandler(stateConfig, google.LoginHandler(oauth2Config, nil)))
+	mux.Handle("/login/google-callback", google.StateHandler(stateConfig, google.CallbackHandler(oauth2Config, issueSession(), nil)))
+}
+
+
+// issueSession issues a cookie session after successful Google login
+func issueSession() http.Handler {
+	fn := func(w http.ResponseWriter, req *http.Request) {
+		ctx := req.Context()
+		googleUser, err := google.UserFromContext(ctx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// 2. Implement a success handler to issue some form of session
+		token, err := jwtauth.CreateJWT()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(fmt.Sprintf(`
+<html>
+	<head>
+		<title>Slick Authentication Callback</title>
+		<script src="/static/jquery-3.3.1.min.js"></script>
+		<script lang="javascript">
+			$(function() {
+				localStorage.token="%s";
+				localStorage.user="%s";
+				window.location.replace("https://localhost:8888/index.html");
+			});
+		</script>
+	</head>
+	<body>
+	</body>
+</html>
+`, token, googleUser.Email)))
+	}
+	return http.HandlerFunc(fn)
+}
+
+
+func rootPage(mux *http.ServeMux) {
+	mux.HandleFunc("/index.html", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(`
+<html>
+	<head>
+		<title>Jason's Awesome Authentication Page</title>
+		<script src="/static/jquery-3.3.1.min.js"></script>
+		<script lang="javascript">
+			function loggedOut() {
+				$('#auth-message').text("You are NOT authenticated.");
+				$('#logout').hide();
+			}
+
+			$(function() {
+				if(localStorage.token) {
+					$('#auth-message').text("You are authenticated with token: " + localStorage.token);
+					$('#login-button').hide()
+					$('#logout').click(function() {
+						delete localStorage.token;
+						$('#login-button').show();
+						loggedOut();
+					});
+				} else {
+					loggedOut()
+				}
+			});
+		</script>
+	</head>
+	<body>
+		<h1 id="auth-message">You are NOT Authenticated</h1>
+		<a id="login-button" href="/login/google"><img src="static/google.png"></img></a>
+		<a id="logout">Logout</a>
+	</body>
+</html>
+`))
+	})
 }
 
 func main() {
@@ -81,6 +181,9 @@ func main() {
 
 		mux.Handle("/", gwmux)
 		serveSwagger(mux)
+		serveStaticAssets(mux)
+		rootPage(mux)
+		loginHandlers(mux)
 
 		conn, err := net.Listen("tcp", "127.0.0.1:8888")
 		if err != nil {
@@ -117,7 +220,8 @@ func main() {
 		permission := os.Args[2]
 
 		var opts []grpc.DialOption
-		creds := credentials.NewClientTLSFromCert(certs.DemoCertPool, "localhost:8888")
+		//creds := credentials.NewClientTLSFromCert(certs.DemoCertPool, "localhost:8888")
+		creds := credentials.NewTLS(&tls.Config{})
 		jwtCreds, _ := jwtauth.NewCredential()
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 		opts = append(opts, grpc.WithPerRPCCredentials(jwtCreds))
