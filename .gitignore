@@ -6,3 +6,4 @@ slickqa/*.swagger.json
 certs/*.key
 certs/*.pub
 certs/*.pem
+www/node_modules

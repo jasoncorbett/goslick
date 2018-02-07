@@ -20,13 +20,17 @@ import (
 	"github.com/dghubble/gologin"
 	"github.com/dghubble/gologin/google"
 	"golang.org/x/oauth2"
+	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	googleOAuth2 "golang.org/x/oauth2/google"
+	"net/http/httputil"
+	"net/url"
+	"github.com/koding/websocketproxy"
 )
 
 
 // grpcHandlerFunc returns an http.Handler that delegates to grpcServer on incoming gRPC
 // connections or otherHandler otherwise. Copied from cockroachdb.
-func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+func grpcHandlerFunc(grpcServer *grpcweb.WrappedGrpcServer, otherHandler http.Handler) http.Handler {
 	logger := log.New("http")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.Header.Get("Authorization"), "Bearer") {
@@ -35,7 +39,7 @@ func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 		}
 		// TODO(tamird): point to merged gRPC code rather than a PR.
 		// This is a partial recreation of gRPC's internal checks https://github.com/grpc/grpc-go/pull/514/files#diff-95e9a25b738459a2d3030e1e6fa2a718R61
-		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+		if strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
 			grpcServer.ServeHTTP(w, r)
 		} else {
 			otherHandler.ServeHTTP(w, r)
@@ -88,24 +92,25 @@ func issueSession() http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(fmt.Sprintf(`
 <html>
 	<head>
 		<title>Slick Authentication Callback</title>
-		<script src="/static/jquery-3.3.1.min.js"></script>
 		<script lang="javascript">
-			$(function() {
-				localStorage.token="%s";
-				localStorage.user="%s";
-				window.location.replace("https://localhost:8888/index.html");
-			});
+			localStorage.token="%s";
+			localStorage.userName="%s";
+			localStorage.userFirstName="%s";
+			localStorage.userFamilyName="%s";
+			localStorage.userGender="%s";
+			localStorage.userPicture="%s";
+			window.location.replace("https://localhost:8888/index.html");
 		</script>
 	</head>
 	<body>
 	</body>
 </html>
-`, token, googleUser.Email)))
+`, token, googleUser.Name, googleUser.GivenName, googleUser.FamilyName, googleUser.Gender, googleUser.Picture)))
 	}
 	return http.HandlerFunc(fn)
 }
@@ -150,6 +155,26 @@ func rootPage(mux *http.ServeMux) {
 	})
 }
 
+func reverseProxy(mux *http.ServeMux) {
+	proxyTarget, _ := url.Parse("http://localhost:3000/")
+	wsProxyTarget, _ := url.Parse("ws://localhost:3000/")
+	proxy := httputil.NewSingleHostReverseProxy(proxyTarget)
+	socketproxy := websocketproxy.NewProxy(wsProxyTarget)
+	mux.Handle("/index.html", proxy)
+	mux.Handle("/index.css", proxy)
+	mux.Handle("/index.js", proxy)
+	mux.Handle("/index.js.map", proxy)
+	 mux.HandleFunc("/sockjs-node/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.Proto, "ws") || strings.Contains(r.Header.Get("Upgrade"), "websocket") {
+			socketproxy.ServeHTTP(w, r)
+		} else {
+			proxy.ServeHTTP(w, r)
+		}
+	})
+	mux.Handle("/__webpack_dev_server__/", proxy)
+	mux.Handle("/img/", proxy)
+}
+
 func main() {
 	if len(os.Args) == 1 || (len(os.Args) > 1 && os.Args[1] == "serve") {
 		opts := []grpc.ServerOption{
@@ -159,6 +184,7 @@ func main() {
 		slickqa.RegisterAuthServer(grpcServer, &slickqa.SlickAuthService{})
 		ctx := context.Background()
 
+		wrappedServer := grpcweb.WrapServer(grpcServer)
 		dcreds := credentials.NewTLS(&tls.Config{
 			ServerName: "localhost:8888",
 			RootCAs:    certs.DemoCertPool,
@@ -182,7 +208,8 @@ func main() {
 		mux.Handle("/", gwmux)
 		serveSwagger(mux)
 		serveStaticAssets(mux)
-		rootPage(mux)
+		//rootPage(mux)
+		reverseProxy(mux)
 		loginHandlers(mux)
 
 		conn, err := net.Listen("tcp", "127.0.0.1:8888")
@@ -192,7 +219,7 @@ func main() {
 
 		srv := &http.Server{
 			Addr:    "localhost:8888",
-			Handler: grpcHandlerFunc(grpcServer, mux),
+			Handler: grpcHandlerFunc(wrappedServer, mux),
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{*certs.DemoKeyPair},
 				NextProtos:   []string{"h2"},

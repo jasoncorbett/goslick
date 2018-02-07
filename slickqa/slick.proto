@@ -3,7 +3,7 @@ syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 
-package com.slickqa;
+package slickqa;
 
 option java_package = "com.slickqa.client.protobuf";
 option go_package = "slickqa";
