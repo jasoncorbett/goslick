@@ -20,7 +20,6 @@ import (
 	"github.com/dghubble/gologin"
 	"github.com/dghubble/gologin/google"
 	"golang.org/x/oauth2"
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	googleOAuth2 "golang.org/x/oauth2/google"
 	"net/http/httputil"
 	"net/url"
@@ -30,7 +29,7 @@ import (
 
 // grpcHandlerFunc returns an http.Handler that delegates to grpcServer on incoming gRPC
 // connections or otherHandler otherwise. Copied from cockroachdb.
-func grpcHandlerFunc(grpcServer *grpcweb.WrappedGrpcServer, otherHandler http.Handler) http.Handler {
+func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
 	logger := log.New("http")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.Header.Get("Authorization"), "Bearer") {
@@ -116,54 +115,12 @@ func issueSession() http.Handler {
 }
 
 
-func rootPage(mux *http.ServeMux) {
-	mux.HandleFunc("/index.html", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`
-<html>
-	<head>
-		<title>Jason's Awesome Authentication Page</title>
-		<script src="/static/jquery-3.3.1.min.js"></script>
-		<script lang="javascript">
-			function loggedOut() {
-				$('#auth-message').text("You are NOT authenticated.");
-				$('#logout').hide();
-			}
-
-			$(function() {
-				if(localStorage.token) {
-					$('#auth-message').text("You are authenticated with token: " + localStorage.token);
-					$('#login-button').hide()
-					$('#logout').click(function() {
-						delete localStorage.token;
-						$('#login-button').show();
-						loggedOut();
-					});
-				} else {
-					loggedOut()
-				}
-			});
-		</script>
-	</head>
-	<body>
-		<h1 id="auth-message">You are NOT Authenticated</h1>
-		<a id="login-button" href="/login/google"><img src="static/google.png"></img></a>
-		<a id="logout">Logout</a>
-	</body>
-</html>
-`))
-	})
-}
-
 func reverseProxy(mux *http.ServeMux) {
 	proxyTarget, _ := url.Parse("http://localhost:3000/")
 	wsProxyTarget, _ := url.Parse("ws://localhost:3000/")
 	proxy := httputil.NewSingleHostReverseProxy(proxyTarget)
 	socketproxy := websocketproxy.NewProxy(wsProxyTarget)
-	mux.Handle("/index.html", proxy)
-	mux.Handle("/index.css", proxy)
-	mux.Handle("/index.js", proxy)
-	mux.Handle("/index.js.map", proxy)
+	mux.Handle("/", proxy)
 	 mux.HandleFunc("/sockjs-node/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.Proto, "ws") || strings.Contains(r.Header.Get("Upgrade"), "websocket") {
 			socketproxy.ServeHTTP(w, r)
@@ -171,8 +128,6 @@ func reverseProxy(mux *http.ServeMux) {
 			proxy.ServeHTTP(w, r)
 		}
 	})
-	mux.Handle("/__webpack_dev_server__/", proxy)
-	mux.Handle("/img/", proxy)
 }
 
 func main() {
@@ -184,7 +139,6 @@ func main() {
 		slickqa.RegisterAuthServer(grpcServer, &slickqa.SlickAuthService{})
 		ctx := context.Background()
 
-		wrappedServer := grpcweb.WrapServer(grpcServer)
 		dcreds := credentials.NewTLS(&tls.Config{
 			ServerName: "localhost:8888",
 			RootCAs:    certs.DemoCertPool,
@@ -205,7 +159,7 @@ func main() {
 			return
 		}
 
-		mux.Handle("/", gwmux)
+		mux.Handle("/api", gwmux)
 		serveSwagger(mux)
 		serveStaticAssets(mux)
 		//rootPage(mux)
@@ -219,7 +173,7 @@ func main() {
 
 		srv := &http.Server{
 			Addr:    "localhost:8888",
-			Handler: grpcHandlerFunc(wrappedServer, mux),
+			Handler: grpcHandlerFunc(grpcServer, mux),
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{*certs.DemoKeyPair},
 				NextProtos:   []string{"h2"},
