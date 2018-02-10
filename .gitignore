@@ -1,8 +1,6 @@
 /goslick
 **/.idea
 slickcli/slickcli
-slickqa/*.pb*.go
-slickqa/*.swagger.json
 certs/*.key
 certs/*.pub
 certs/*.pem

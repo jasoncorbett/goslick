@@ -1,0 +1,54 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "slick.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/isAuthorized/{permission}": {
+      "get": {
+        "operationId": "IsAuthorized",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/slickqaIsAuthorizedResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "permission",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "slickqaIsAuthorizedResponse": {
+      "type": "object",
+      "properties": {
+        "allowed": {
+          "type": "boolean",
+          "format": "boolean"
+        }
+      }
+    }
+  }
+}
